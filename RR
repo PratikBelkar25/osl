@@ -2,51 +2,88 @@
 
 int main() {
     int n, i, tq, time = 0, completed = 0;
-    int at[20], bt[20], rt[20], wt[20], tat[20], flag[20] = {0};
+    int at[20], bt[20], rt[20], wt[20] = {0}, tat[20] = {0};
+    int queue[50], front = 0, rear = 0, visited[20] = {0};
 
     printf("Enter number of processes: ");
     scanf("%d", &n);
 
     for(i = 0; i < n; i++) {
-        printf("Enter Arrival Time of P%d: ", i+1);
+        printf("Enter Arrival Time of P%d: ", i + 1);
         scanf("%d", &at[i]);
-        printf("Enter Burst Time of P%d: ", i+1);
+        printf("Enter Burst Time of P%d: ", i + 1);
         scanf("%d", &bt[i]);
-        rt[i] = bt[i]; // Remaining time initialized
+        rt[i] = bt[i];
     }
 
     printf("Enter Time Quantum: ");
     scanf("%d", &tq);
 
-    printf("\nGantt Chart:\n");
-    printf("0");
-
-    while (completed != n) {
-        int done = 1;
-        for(i = 0; i < n; i++) {
-            if(at[i] <= time && rt[i] > 0) {
-                done = 0;
-                if(rt[i] > tq) {
-                    time += tq;
-                    rt[i] -= tq;
-                } else {
-                    time += rt[i];
-                    wt[i] = time - at[i] - bt[i];
-                    rt[i] = 0;
-                    completed++;
-                }
-                printf(" -- P%d -- %d", i+1, time);
-            }
+    // Initialize: find first arriving process
+    int current = 0, min_at = 9999;
+    for(i = 0; i < n; i++) {
+        if(at[i] < min_at) {
+            min_at = at[i];
+            current = i;
         }
-        if(done) time++; // If no process arrived yet, move time forward
     }
 
+    time = at[current];
+    queue[rear++] = current;
+    visited[current] = 1;
+
+    printf("\nGantt Chart:\n");
+    printf("%d", time);
+
+    while(completed != n) {
+        current = queue[front++];
+        
+        if(rt[current] > tq) {
+            rt[current] -= tq;
+            time += tq;
+        } else {
+            time += rt[current];
+            wt[current] = time - at[current] - bt[current];
+            rt[current] = 0;
+            tat[current] = wt[current] + bt[current];
+            completed++;
+        }
+
+        printf(" -- P%d -- %d", current + 1, time);
+
+        // Enqueue newly arrived processes
+        for(i = 0; i < n; i++) {
+            if(at[i] <= time && !visited[i] && rt[i] > 0) {
+                queue[rear++] = i;
+                visited[i] = 1;
+            }
+        }
+
+        // Re-add current process if not finished
+        if(rt[current] > 0)
+            queue[rear++] = current;
+
+        // If queue empty, jump to next arrival
+        if(front == rear && completed != n) {
+            int next_time = 9999, next_proc = -1;
+            for(i = 0; i < n; i++) {
+                if(rt[i] > 0 && at[i] < next_time) {
+                    next_time = at[i];
+                    next_proc = i;
+                }
+            }
+            time = at[next_proc];
+            queue[rear++] = next_proc;
+            visited[next_proc] = 1;
+            printf(" | idle | %d", time);
+        }
+    }
+
+    // Print table
     printf("\n\nProcess\tAT\tBT\tWT\tTAT\n");
     printf("----------------------------------------\n");
-
     float avgWT = 0, avgTAT = 0;
     for(i = 0; i < n; i++) {
-        tat[i] = bt[i] + wt[i];
         avgWT += wt[i];
         avgTAT += tat[i];
         printf("P%d\t%d\t%d\t%d\t%d\n", i+1, at[i], bt[i], wt[i], tat[i]);
